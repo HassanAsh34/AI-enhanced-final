@@ -70,6 +70,7 @@ def printGraphGUI(g,ax,optimal,colors,canvasA,canvasB = None):
         for i in optimal:
             color.append(colors[i])
         chromatic_number = len(set(color))
+
         nx.draw(g,node_color= color, pos=pos, with_labels=True, node_size=800, font_weight="bold",ax=ax)
 
 

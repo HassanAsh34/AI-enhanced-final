@@ -188,7 +188,7 @@ def another_Sol_bt(ca = False):#tested
             messagebox.showerror("Error","you should run the algorithm first")
 
 def run_cultural_alg():
-    global g, nodes , colors , optimal_ca , timeCulturalAlgorithm , pickbtnCA , ax4 , ax5 , canvas7 , canvas8 , minCnum2
+    global g, nodes , colors , optimal_ca , timeCulturalAlgorithm , pickbtnCA , ax4 , ax5 , ax6 , ax7 , canvas7 , canvas8 ,canvas9,canvas10, minCnum2
     start = time.time()
     try:
         pop_size = int(entry_pop_size.get())
@@ -242,14 +242,25 @@ def run_cultural_alg():
     ax4.set_ylabel("average fitness rate")
     ax4.plot(iter, avg_fitnessforBelief)
 
+    ax6.cla()
+    ax6.set_xlabel("iteration number in 1000")
+    ax6.set_ylabel("average chromatic number")
+    ax6.plot(iter,average_chromaticNumberListforBelief)
+
     ax5.cla()
     ax5.set_xlabel("iteration number in 1000")
     ax5.set_ylabel("average fitness rate")
     ax5.plot(iter2, average_fitnessListforPopulation)
 
+    ax7.cla()
+    ax7.set_xlabel("iteration number in 1000")
+    ax7.set_ylabel("average chromatic number")
+    ax7.plot(iter2, average_chromaticNumberListforPopulation)
     # redraw the Tk canvases so the new plots appear
     canvas7.draw()
     canvas8.draw()
+    canvas9.draw()
+    canvas10.draw()
     timeCulturalAlgorithm.append(runtime)
     ca_average.set(np.average(timeCulturalAlgorithm))
     Update_canvas(2)
@@ -471,15 +482,25 @@ create_metric_card(scrollable_frame, "Average Runtime", ca_average, "#3498db")
 fig4, ax4 = plt.subplots(1, 1, figsize=(4, 6))
 ax4.set_xlabel("iteration number in 1000")
 ax4.set_ylabel("average fitness rate")
+fig6, ax6 = plt.subplots(1, 1, figsize=(4, 6))
+ax6.set_xlabel("iteration number in 1000")
+ax6.set_ylabel("average chromatic number")
 fig5, ax5 = plt.subplots(1, 1, figsize=(4, 6))
 ax5.set_xlabel("iteration number in 1000")
 ax5.set_ylabel("average fitness rate")
+fig7, ax7 = plt.subplots(1, 1, figsize=(4, 6))
+ax7.set_xlabel("iteration number in 1000")
+ax7.set_ylabel("average chromatic number")
 create_metric_card(scrollable_frame,"Belief space metrics:",None,"#e74c3c")
 canvas7 = FigureCanvasTkAgg(fig4, master=scrollable_frame)
 canvas7.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+canvas9 = FigureCanvasTkAgg(fig6, master=scrollable_frame)
+canvas9.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 create_metric_card(scrollable_frame,"Population metrics",None,"#e74c3c")
 canvas8 = FigureCanvasTkAgg(fig5, master=scrollable_frame)
-canvas8.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+canvas8.get_tk_widget().pack(fill=tk.BOTH,pady=2, expand=True)
+canvas10 = FigureCanvasTkAgg(fig7, master=scrollable_frame)
+canvas10.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
 
 root.mainloop()

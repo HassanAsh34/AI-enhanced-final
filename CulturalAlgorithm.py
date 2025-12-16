@@ -2,6 +2,7 @@ import math
 import random
 
 import numpy as np
+from fontTools.merge.util import first
 from networkx.algorithms.polynomials import chromatic_polynomial
 from numpy.ma.extras import average
 
@@ -96,6 +97,7 @@ def CulturalAlgorithm(nodes, colors, g, pop_size, mutaion_rate, belief_size,infl
         population = generate_new_population(mutaion_rate, elites, belief_size, belief_space,
                                              len(nodes), len(colors), pop_size,influence_rate)
         population, avg_fitness, avg_chromatic = calculatefitness(population, g)
+
         # print(belief_space)
         # Convergence check
         if i % 1000 == 0:
@@ -108,7 +110,7 @@ def CulturalAlgorithm(nodes, colors, g, pop_size, mutaion_rate, belief_size,infl
                 avgf.append(fitness[1])
                 avgc.append(fitness[3])
             avgf = float(np.average(avgf))
-            avgc = float(np.average(avgc))
+            avgc = int(np.average(avgc))
             avg_fitnessforBelief.append(avgf)
             average_chromaticNumberListforBelief.append(avgc)
         if len(avg_fitnessforBelief) > convergence_window:
@@ -146,13 +148,16 @@ def update_belief_space(belief_space,elites,belief_size):
 def generate_new_population(mutaion_rate,elites,belief_size,belief_space,num_nodes,num_colors,pop_size,influence_rate):
     new_pop = []
     # print(elites)
-    for e in elites:
-        # print(e[0])
-        new_pop.append(e[0])
+    # for e in elites:
+    #     # print(e[0])
+    #     new_pop.append(e[0])
+    crossover_elites = crossover(elites,num_nodes)
+    new_pop.extend(crossover_elites)
 
     belief_offspring_count = int(pop_size*.7)
 
-    new_pop = get_belief_influenced_children(belief_offspring_count,belief_space,num_nodes,num_colors,influence_rate)
+    belief_influenced = get_belief_influenced_children(belief_offspring_count,belief_space,num_nodes,num_colors,influence_rate)
+    new_pop.extend(belief_influenced)
 
     if len(new_pop) < pop_size:
         pop = generatePopulation(num_nodes,num_colors,(pop_size-len(new_pop)));
@@ -164,6 +169,30 @@ def generate_new_population(mutaion_rate,elites,belief_size,belief_space,num_nod
             child[idx] = random.randint(0,num_colors-1)
     return np.array(new_pop)
     # for _ in range(belief_offspring_count):
+
+
+# def crossover(elites,num_nodes):
+#     size = len(elites)
+#     children = list()
+#     for i in range(size):
+#         i1 = i % size
+#         i2 = (i+1)%size
+#         point = random.randint(0,num_nodes-1)
+#         p1 = elites[i1][0]
+#         p2 = elites[i2][0]
+#         child = p1[:point] + p2[point:]
+#         children.append(child)
+
+def crossover(elites, num_nodes):
+    size = len(elites)
+    children = []
+    for _ in range(size):
+        i1, i2 = random.sample(range(size), 2)  # pick 2 distinct parents
+        p1, p2 = elites[i1][0], elites[i2][0]
+        point = random.randint(1, num_nodes-1)  # meaningful crossover
+        child = p1[:point] + p2[point:]
+        children.append(child)
+    return children
 
 
 
