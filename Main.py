@@ -188,7 +188,7 @@ def another_Sol_bt(ca = False):#tested
             messagebox.showerror("Error","you should run the algorithm first")
 
 def run_cultural_alg():
-    global g, nodes , colors , optimal_ca , timeCulturalAlgorithm , pickbtnCA , ax4 , ax5 , ax6 , ax7 , canvas7 , canvas8 ,canvas9,canvas10, minCnum2
+    global g, nodes , colors , optimal_ca , timeCulturalAlgorithm , pickbtnCA , ax4 , ax5 , ax6 , ax7 ,fig4,fig5,fig6,fig7, canvas7 , canvas8 ,canvas9,canvas10, minCnum2
     start = time.time()
     try:
         pop_size = int(entry_pop_size.get())
@@ -241,21 +241,25 @@ def run_cultural_alg():
     ax4.set_xlabel("iteration number in 1000")
     ax4.set_ylabel("average fitness rate")
     ax4.plot(iter, avg_fitnessforBelief)
+    fig4.tight_layout()
 
     ax6.cla()
     ax6.set_xlabel("iteration number in 1000")
     ax6.set_ylabel("average chromatic number")
     ax6.plot(iter,average_chromaticNumberListforBelief)
+    fig6.tight_layout()
 
     ax5.cla()
     ax5.set_xlabel("iteration number in 1000")
     ax5.set_ylabel("average fitness rate")
     ax5.plot(iter2, average_fitnessListforPopulation)
+    fig5.tight_layout()
 
     ax7.cla()
     ax7.set_xlabel("iteration number in 1000")
     ax7.set_ylabel("average chromatic number")
     ax7.plot(iter2, average_chromaticNumberListforPopulation)
+    fig7.tight_layout()
     # redraw the Tk canvases so the new plots appear
     canvas7.draw()
     canvas8.draw()
@@ -493,14 +497,14 @@ ax7.set_xlabel("iteration number in 1000")
 ax7.set_ylabel("average chromatic number")
 create_metric_card(scrollable_frame,"Belief space metrics:",None,"#e74c3c")
 canvas7 = FigureCanvasTkAgg(fig4, master=scrollable_frame)
-canvas7.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+canvas7.get_tk_widget().pack(fill=tk.BOTH,pady=4, expand=True)
 canvas9 = FigureCanvasTkAgg(fig6, master=scrollable_frame)
-canvas9.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+canvas9.get_tk_widget().pack(fill=tk.BOTH,pady=4, expand=True)
 create_metric_card(scrollable_frame,"Population metrics",None,"#e74c3c")
 canvas8 = FigureCanvasTkAgg(fig5, master=scrollable_frame)
-canvas8.get_tk_widget().pack(fill=tk.BOTH,pady=2, expand=True)
+canvas8.get_tk_widget().pack(fill=tk.BOTH,pady=4, expand=True)
 canvas10 = FigureCanvasTkAgg(fig7, master=scrollable_frame)
-canvas10.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+canvas10.get_tk_widget().pack(fill=tk.BOTH,pady=4, expand=True)
 
 
 root.mainloop()
