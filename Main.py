@@ -16,6 +16,7 @@ from PIL import Image , ImageTk
 from Tools.demo.sortvisu import steps
 from fontTools.merge.util import first
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from nltk import align
 from numpy.ma.extras import average
 from unicodedata import decimal
 
@@ -123,19 +124,31 @@ def Update_canvas(flag = 0):
         update_bt_canvas()
         update_ca_canvas()
 
-def create_metric_card(parent, title, var = None, color="#3498db"):
-    card = tk.Frame(parent, bg="white", relief=tk.RAISED, bd=2)
+def create_metric_card(parent, title, var = None, color="#3498db",flag = True):
+    #
+    if flag:
+        card = tk.Frame(parent, bg="white", relief=tk.RAISED, bd=2)
+    else:
+        card = tk.Frame(parent, bg="white")
     card.pack(fill=tk.X, pady=8, padx=5)
-
-    title_label = tk.Label(card, text=title, bg="white", fg="#34495e",
-                           font=("Arial", 10, "bold"), anchor="w")
-    title_label.pack(fill=tk.X, padx=15, pady=(10, 5))
+    if title != "":
+        title_label = tk.Label(card, text=title, bg="white", fg="#34495e",
+                               font=("Arial", 10, "bold"), anchor="w")
+        title_label.pack(fill=tk.X, padx=15, pady=(10, 5))
+    widget = None
     if var is not None:
-        value_label = tk.Label(card, textvariable=var, bg="white", fg=color,
-                           font=("Arial", 12), anchor="w", wraplength=350)
-        value_label.pack(fill=tk.X, padx=15, pady=(0, 10))
+        if var is tk.Entry:
+            widget = tk.Entry(card)
+            widget.pack(fill=tk.X, padx=15, pady=(0, 10))
+        elif var is tk.Button:
+            widget = tk.Button(card, text=title)
+            widget.pack(pady=(5, 10))
+        else:
+            value_label = tk.Label(card, textvariable=var, bg="white", fg=color,
+                               font=("Arial", 12), anchor="w", wraplength=350)
+            value_label.pack(fill=tk.X, padx=15, pady=(0, 10))
 
-    return card
+    return card , widget
 
 
 def run_Backtracking():#tested
@@ -155,6 +168,8 @@ def run_Backtracking():#tested
         evsols = n.evaluateSolutions(solutions)
         minnum = evsols[0][0]
         optimal_bk = [sols for cnum, sols in evsols if cnum == minnum]
+        print(evsols)
+        # print(solutions)
         end = time.time()
         runtime = end - start
         messagebox.showinfo("Success",f"""chromatic number is {minnum} and {len(optimal_bk)} optimal solutions found
@@ -188,22 +203,37 @@ def another_Sol_bt(ca = False):#tested
             messagebox.showerror("Error","you should run the algorithm first")
 
 def run_cultural_alg():
-    global g, nodes , colors , optimal_ca , timeCulturalAlgorithm , pickbtnCA , ax4 , ax5 , ax6 , ax7 ,fig4,fig5,fig6,fig7, canvas7 , canvas8 ,canvas9,canvas10, minCnum2
+    global g, nodes , colors , optimal_ca , timeCulturalAlgorithm , pickbtnCA , converged_at , ax4 , ax5 , ax6 , ax7 ,fig4,fig5,fig6,fig7, canvas7 , canvas8 ,canvas9,canvas10, minCnum2
     start = time.time()
+    # flag = False
     try:
-        pop_size = int(entry_pop_size.get())
-        mutaion = float(entry_mutaion.get())
-        belief_size = int(entry_belief_size.get())
-        if pop_size <= 0 or mutaion < 0 or belief_size <= 0:
+        pop_size = int(entry_pop_size.get()) if entry_pop_size.get() != "" else 0
+        mutaion = float(entry_mutaion.get()) if entry_mutaion.get() != "" else 0.0
+        belief_size = int(entry_belief_size.get()) if entry_belief_size.get() != "" else 0
+        threshold = float(entry_threshold.get()) if entry_threshold.get() != "" else 1e-3
+        influece = int(entry_influenceRate.get())/100 if entry_influenceRate.get() != "" else .6
+        if pop_size <= 0 or mutaion <= 0  or belief_size <= 0:
             raise ValueError
     except ValueError:
+        # if flag:
+        #     messagebox.showerror("Error","some fields are empty")
         if mutaion > 1:
             messagebox.showerror("Error","Mutation rate should be a value between 0 and 1")
+        elif threshold > 1 or threshold < 0 :
+            # if entry_threshold.get() == "":
+            #     threshold = 1e-3
+            # else:
+            messagebox.showerror("Error", "Threshold should be a value between 0 and 1")
+        elif influece > .8 or influece <= 0:
+            # if entry_influenceRate.get() == "":
+            #     influece = .6
+            # else:
+            messagebox.showerror("Error","influence rate should be a value greater than 0 and less than 80% to avoid overfitting of model")
         else:
             messagebox.showerror("Error", "Please enter positive integers")
         return
 
-    belief_space, population, average_fitnessListforPopulation, average_chromaticNumberListforPopulation, avg_fitnessforBelief, average_chromaticNumberListforBelief, converged_at = CA.CulturalAlgorithm(nodes, colors, g,  pop_size, mutaion,belief_size)
+    belief_space, population, average_fitnessListforPopulation, average_chromaticNumberListforPopulation, avg_fitnessforBelief, average_chromaticNumberListforBelief, converged_atiter = CA.CulturalAlgorithm(nodes, colors, g,  pop_size, mutaion,belief_size,influece,threshold)
     end = time.time()
     runtime = end - start
 
@@ -225,14 +255,25 @@ def run_cultural_alg():
     print(len(belief_space), len(population),len(avg_fitnessforBelief),len(average_fitnessListforPopulation))
     optimal_ca = [belief[0] for  belief in belief_space]
     minCnum2.set(belief_space[0][3])
-    print(minCnum2)
+    # print(minCnum2)
     # numofElitesFound = tk.StringVar()
 
     step = 1000
-    iter = 1000 + step * np.arange(len(avg_fitnessforBelief))
-    iter2 = 1000 + step * np.arange(len(average_fitnessListforPopulation))
+    converged_at.set(converged_atiter)
+    numitertion = converged_atiter / 1000
+    # iter = 1000 + step * np.arange(len(avg_fitnessforBelief))
+    iter = step * np.arange(1.0,numitertion+1)
+    # iter2 = 1000 + step * np.arange(len(average_fitnessListforPopulation))
+    iter2 = step * np.arange(0.0,numitertion+1)
     print(iter)
     print(len(iter))
+    print(avg_fitnessforBelief)
+    print(len(avg_fitnessforBelief))
+    print(iter2)
+    print(len(iter2))
+    print(average_fitnessListforPopulation)
+    print(len(average_fitnessListforPopulation))
+
     if len(timeCulturalAlgorithm) == 0 and pickbtnCA is None:
         pickbtnCA = tk.Button(left_frame3, text="Pick another solution", command=lambda: another_Sol_bt(True))
         pickbtnCA.pack(pady=5)
@@ -314,18 +355,30 @@ root.title("Graph Coloring GUI")
 root.geometry("1280x720")
 main_frame = tk.Frame(root)
 main_frame.pack(fill=tk.BOTH, expand=True)
-main_frame_right = tk.Frame(main_frame,width=500,bg="lightgray")
+main_frame_right = tk.Frame(main_frame,width=500,bg="#FAF9F6")
 main_frame_right.pack(side=tk.RIGHT,fill=tk.BOTH,expand=True)
 main_frame_left = tk.Frame(main_frame)
 main_frame_left.pack(side=tk.LEFT,fill=tk.BOTH,expand=True)
-tk.Label(main_frame_right,text="Create Graph",font=("Arial", 16),bg="lightgray").pack(pady=30)
-tk.Label(main_frame_right,text="Enter Number of Nodes:",bg="lightgray").pack(pady=5)
-entry_node = tk.Entry(main_frame_right)
-entry_node.pack(pady=5)
-tk.Label(main_frame_right,text="Enter Number of Colors:",bg="lightgray").pack(pady=5)
-entry_color = tk.Entry(main_frame_right)
-entry_color.pack(pady=5)
-tk.Button(main_frame_right,text="Next",command=lambda  :go_to_main()).pack(pady=20)
+
+initialForm = tk.Frame(master=main_frame_right,width=400,bg="white", relief=tk.RAISED, bd=1)
+initialForm.pack(fill=tk.X, padx=10, pady= 150 )
+title_label = tk.Label(initialForm, text="Create Graph", bg="white", fg="#34495e",
+                       font=("Arial", 10, "bold"), anchor="w")
+title_label.pack(expand=True)
+# entry_node.pack(pady=5)
+# entry_node2 = tk.Entry(main_frame_right)
+# entry_node.pack(pady=5)
+card , entry_node =create_metric_card(initialForm,"Enter Number of Nodes:",tk.Entry,"white",False)
+card2 , entry_color = create_metric_card(initialForm,"Enter Number of Colors:",tk.Entry,"white",False)
+# btn = tk.Button(initialForm,text="Next",command=lambda  :go_to_main())
+card3 , nextBtn = create_metric_card(initialForm,"",tk.Button,"white",False)
+nextBtn.configure(text = "Next",command=lambda  :go_to_main(),bg="#3498db")
+# card1 , _ = create_metric_card(initialForm,)
+# card.forget()
+# tk.Label(main_frame_right,text="",bg="lightgray").pack(pady=5)
+# entry_color = tk.Entry(main_frame_right)
+# entry_color.pack(pady=5)
+
 
 img = Image.open("Logo.png")
 
@@ -352,8 +405,38 @@ notebook.pack(fill=tk.BOTH,expand=True)
 tab_display = ttk.Frame(notebook)
 notebook.add(tab_display,text="Draw Graph")
 
-left_frame = tk.Frame(tab_display,width=200,bg="lightgray")
+left_frame = tk.Frame(tab_display,width=300,bg="#FAF9F6")
 left_frame.pack(side=tk.LEFT,fill=tk.BOTH,expand=True,padx=5,pady=5)
+
+drawgraphForm = tk.Frame(master=left_frame,width=200,bg="white", relief=tk.RAISED, bd=1)
+drawgraphForm.pack(fill=tk.X, padx=10, pady= 15 )
+
+title_label = tk.Label(drawgraphForm, text="Draw Graph", bg="white", fg="#34495e",
+                       font=("Arial", 10, "bold"), anchor="w")
+title_label.pack(expand=True)
+
+card4 , entry_edge =create_metric_card(drawgraphForm,"Add Edge:",tk.Entry,"white",False)
+card5 , AddEdgeBtn = create_metric_card(drawgraphForm,"",tk.Button,flag=False)
+AddEdgeBtn.configure(text = "Add Edge",command=lambda: add_edge(entry_edge.get()), bg="#27ae60")
+
+card6 , AddNodeBtn = create_metric_card(drawgraphForm,"",tk.Button,flag=False)
+AddNodeBtn.configure(text="Add Node",command=lambda: add_node(), bg="#3498db")
+
+card7 , AddGenerateEdgesBtn = create_metric_card(drawgraphForm,"",tk.Button,flag=False)
+AddGenerateEdgesBtn.configure(text="Generate Edges",command=lambda: add_edge_randomly(), bg="#9b59b6")
+
+card8 , BackBtn = create_metric_card(drawgraphForm,"",tk.Button,flag=False)
+BackBtn.configure(text="Back to initial screen",command=lambda: BacktoInitial(),bg="#e74c3c")
+
+# tk.Label(left_frame, text="Add Edge:").pack(pady=5)
+# entry_edge = tk.Entry(left_frame)
+# entry_edge.pack(pady=5)
+# tk.Button(left_frame, text="Add Edge", ).pack(pady=5)
+# tk.Button(left_frame, text="Add Node", command=lambda: add_node()).pack(pady=5)
+# tk.Button(left_frame, text="Generate Edges", command=lambda: add_edge_randomly()).pack(pady=5)
+#
+# tk.Button(left_frame,text="Back to initial screen",command= lambda:  BacktoInitial()).pack(pady=5)
+
 
 right_frame = tk.Frame(tab_display,bg="white")
 right_frame.pack(side=tk.RIGHT,fill=tk.BOTH,expand=True,padx=5,pady=5)
@@ -362,20 +445,26 @@ fig, ax = plt.subplots(figsize=(5,5))
 canvas = FigureCanvasTkAgg(fig, master=right_frame)
 canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-tk.Label(left_frame, text="Add Edge:").pack(pady=5)
-entry_edge = tk.Entry(left_frame)
-entry_edge.pack(pady=5)
-tk.Button(left_frame, text="Add Edge", command=lambda: add_edge(entry_edge.get())).pack(pady=5)
-tk.Button(left_frame, text="Add Node", command=lambda: add_node()).pack(pady=5)
-tk.Button(left_frame, text="Generate Edges", command=lambda: add_edge_randomly()).pack(pady=5)
 
-tk.Button(left_frame,text="Back to initial screen",command= lambda:  BacktoInitial()).pack(pady=5)
 
 # backtracking
 tab_backtracking = ttk.Frame(notebook)
 notebook.add(tab_backtracking,text="Backtracking")
-left_frame2 = tk.Frame(tab_backtracking,width=200,bg="lightgray")
+left_frame2 = tk.Frame(tab_backtracking,width=300,bg="#FAF9F6")
 left_frame2.pack(side=tk.LEFT,fill=tk.BOTH,expand=True,padx=5,pady=5)
+BackTrackingForm = tk.Frame(master=left_frame2,width=200,bg="white", relief=tk.RAISED, bd=1)
+BackTrackingForm.pack(fill=tk.X, padx=10, pady= 15 )
+title_label = tk.Label(BackTrackingForm, text="Backtracking", bg="white", fg="#34495e",
+                       font=("Arial", 10, "bold"), anchor="w")
+title_label.pack(expand=True)
+
+card9 , RunBTBtn = create_metric_card(BackTrackingForm,"",tk.Button,flag=False)
+RunBTBtn.configure(text = "Run",command=lambda: run_Backtracking(), bg="#27ae60")
+
+card10 , AddColorBtn = create_metric_card(BackTrackingForm,"",tk.Button,flag=False)
+AddColorBtn.configure(text="Add Node",command=lambda: add_color(), bg="#3498db")
+
+
 
 right_frame2 = tk.Frame(tab_backtracking,bg="white")
 right_frame2.pack(side=tk.RIGHT,fill=tk.BOTH,expand=True,padx=5,pady=5)
@@ -383,30 +472,58 @@ fig2, ax2 = plt.subplots(figsize=(5,5))
 canvas2 = FigureCanvasTkAgg(fig2, master=right_frame2)
 canvas2.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 n.printGraphGUI(g, ax2, None, colors,canvas2)
-tk.Button(left_frame2, text="Run", command=lambda: run_Backtracking()).pack(pady=5)
-tk.Button(left_frame2,text="Add Color",command= lambda : add_color()).pack(pady=5)
+# tk.Button(left_frame2, text="Run", command=lambda: run_Backtracking()).pack(pady=5)
+# tk.Button(left_frame2,text="Add Color",command= lambda : add_color()).pack(pady=5)
+
+
 
 #Cutural algorithm
 tab_Cultural = ttk.Frame(notebook)
 notebook.add(tab_Cultural,text="Cutural Algorithm")
-left_frame3= tk.Frame(tab_Cultural,width=200,bg="lightgray")
+left_frame3= tk.Frame(tab_Cultural,width=300,bg="#FAF9F6")
 left_frame3.pack(side=tk.LEFT,fill=tk.BOTH,expand=True,padx=5,pady=5)
+
+CAForm = tk.Frame(master=left_frame3,width=200,bg="white", relief=tk.RAISED, bd=1)
+CAForm.pack(fill=tk.X, padx=10, pady= 15 )
+title_label = tk.Label(CAForm, text="Cultural Algorithm", bg="white", fg="#34495e",
+                       font=("Arial", 10, "bold"), anchor="w")
+title_label.pack(expand=True)
+# entry_node.pack(pady=5)
+# entry_node2 = tk.Entry(main_frame_right)
+# entry_node.pack(pady=5)
+card10 , entry_pop_size =create_metric_card(CAForm,"Population Size",tk.Entry,"white",False)
+card11 , entry_belief_size = create_metric_card(CAForm,"Belief space Size",tk.Entry,"white",False)
+card12 , entry_mutaion =create_metric_card(CAForm,"Mutaion Rate",tk.Entry,"white",False)
+card13 , entry_threshold = create_metric_card(CAForm,"Threshold: default 1x10^-3",tk.Entry,"white",False)
+card14 , entry_influenceRate = create_metric_card(CAForm,"Influence Rate: default 60%",tk.Entry,"white",False)
+# tk.Button(left_frame3,text="run",command= lambda : run_cultural_alg()).pack(pady=5)
+card15 , RunCABtn = create_metric_card(CAForm,"",tk.Button,"white",False)
+RunCABtn.configure(text = "Run",command=lambda  :run_cultural_alg(),bg="#27ae60")
+
+
+
 right_frame3 = tk.Frame(tab_Cultural,bg="white")
 right_frame3.pack(side= tk.RIGHT,fill=tk.BOTH,expand=True,padx=5,pady=5)
-tk.Label(left_frame3,text="Population Size").pack(pady=5)
-entry_pop_size = tk.Entry(left_frame3)
-entry_pop_size.pack(pady=5)
-tk.Label(left_frame3,text="Belief space Size").pack(pady=5)
-entry_belief_size = tk.Entry(left_frame3)
-entry_belief_size.pack(pady=5)
-tk.Label(left_frame3,text="Mutaion Rate").pack(pady=5)
-entry_mutaion = tk.Entry(left_frame3)
-entry_mutaion.pack(pady=5)
+# tk.Label(left_frame3,text="Population Size").pack(pady=5)
+# entry_pop_size = tk.Entry(left_frame3)
+# entry_pop_size.pack(pady=5)
+# tk.Label(left_frame3,text="Belief space Size").pack(pady=5)
+# entry_belief_size = tk.Entry(left_frame3)
+# entry_belief_size.pack(pady=5)
+# tk.Label(left_frame3,text="Mutaion Rate").pack(pady=5)
+# entry_mutaion = tk.Entry(left_frame3)
+# entry_mutaion.pack(pady=5)
+# tk.Label(left_frame3,text="Threshold: default 1x10^-3").pack(pady=5)
+# entry_threshold = tk.Entry(left_frame3)
+# entry_threshold.pack(pady=5)
+# tk.Label(left_frame3,text="Influence Rate: default 60%").pack(pady=5)
+# entry_influenceRate = tk.Entry(left_frame3)
+# entry_influenceRate.pack(pady=5)
 fig3, ax3 = plt.subplots(figsize=(5,5))
 canvas3 = FigureCanvasTkAgg(fig3,master=right_frame3)
 canvas3.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 n.printGraphGUI(g,ax3, None,colors,canvas3)
-tk.Button(left_frame3,text="run",command= lambda : run_cultural_alg()).pack(pady=5)
+# tk.Button(left_frame3,text="run",command= lambda : run_cultural_alg()).pack(pady=5)
 
 #comparison
 tab_Comparison = ttk.Frame(notebook)
@@ -416,7 +533,7 @@ notebook2.pack(fill=tk.BOTH,expand=True)
 tab_backtracking_metrics = ttk.Frame(notebook2)
 notebook2.add(tab_backtracking_metrics,text="Backtracking")
 
-left_frame4 = tk.Frame(tab_backtracking_metrics, width=400, bg="#f5f5f5")
+left_frame4 = tk.Frame(tab_backtracking_metrics, width=400, bg="white")
 left_frame4.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 header_frame4 = tk.Frame(left_frame4, bg="#2c3e50", relief=tk.RAISED, bd=2)
 header_frame4.pack(fill=tk.X, pady=(0, 15))
@@ -427,7 +544,7 @@ numofOptimalsolFounded = tk.StringVar()
 bk_average = tk.StringVar()
 runtime_variable = tk.StringVar()
 
-metrics_container4 = tk.Frame(left_frame4, bg="#f5f5f5")
+metrics_container4 = tk.Frame(left_frame4, bg="white")
 metrics_container4.pack(fill=tk.BOTH, expand=True, padx=5)
 create_metric_card(metrics_container4, "Minimum Chromatic Number", minCnum, "#e74c3c")
 create_metric_card(metrics_container4, "Optimal Solutions Found", numofOptimalsolFounded, "#27ae60")
@@ -453,7 +570,7 @@ tk.Label(header_frame5, text="Cultural Algorithm", bg="#16a085", fg="white",
          font=("Arial", 16, "bold")).pack(pady=10)
 
 minCnum2 = tk.StringVar()
-numofElitesFound = tk.StringVar()
+converged_at = tk.StringVar()
 ca_average = tk.StringVar()
 
 right_frame5 = tk.Frame(tab_Cultural_metrics,width=780,bg="gray")
@@ -481,7 +598,8 @@ scrollable_frame.bind(
 )
 scroll_canvas.create_window((0,0), window=scrollable_frame, anchor="nw")
 create_metric_card(scrollable_frame, "Minimum Chromatic Number", minCnum2, "#e74c3c")
-create_metric_card(scrollable_frame, "Elite Solutions Found", numofElitesFound, "#27ae60")
+# create_metric_card(scrollable_frame, "Elite Solutions Found", numofElitesFound, "#27ae60")
+create_metric_card(scrollable_frame, "converged at",converged_at, "#27ae60")
 create_metric_card(scrollable_frame, "Average Runtime", ca_average, "#3498db")
 fig4, ax4 = plt.subplots(1, 1, figsize=(4, 6))
 ax4.set_xlabel("iteration number in 1000")
@@ -497,14 +615,14 @@ ax7.set_xlabel("iteration number in 1000")
 ax7.set_ylabel("average chromatic number")
 create_metric_card(scrollable_frame,"Belief space metrics:",None,"#e74c3c")
 canvas7 = FigureCanvasTkAgg(fig4, master=scrollable_frame)
-canvas7.get_tk_widget().pack(fill=tk.BOTH,pady=4, expand=True)
+canvas7.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 canvas9 = FigureCanvasTkAgg(fig6, master=scrollable_frame)
-canvas9.get_tk_widget().pack(fill=tk.BOTH,pady=4, expand=True)
+canvas9.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 create_metric_card(scrollable_frame,"Population metrics",None,"#e74c3c")
 canvas8 = FigureCanvasTkAgg(fig5, master=scrollable_frame)
-canvas8.get_tk_widget().pack(fill=tk.BOTH,pady=4, expand=True)
+canvas8.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 canvas10 = FigureCanvasTkAgg(fig7, master=scrollable_frame)
-canvas10.get_tk_widget().pack(fill=tk.BOTH,pady=4, expand=True)
+canvas10.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
 
 root.mainloop()

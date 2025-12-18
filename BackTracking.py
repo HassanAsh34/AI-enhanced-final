@@ -12,25 +12,46 @@
 import copy
 
 
-def coloringWithCanonicalOrder(solution,solsorted_set,lcolor,i,lnodes):
+# def coloringWithCanonicalOrder(solution,solsorted_set,lcolor,i,lnodes):
+#     if i == len(lnodes):
+#         sol = [node.color for node in lnodes]
+#         sortedsol = set(sorted(sol))
+#         # res =
+#
+#         if sortedsol not in solsorted_set:
+#             solution.append(sol)
+#             # print(sol)
+#             solsorted_set.append(sortedsol)
+#         return
+#     if len(solution) >= 10000:
+#         return
+#         # fillColor(node[0],lcolor)
+#     node = lnodes[i]
+#     for cid, color in enumerate(lcolor):
+#         if(node.isSafeCanonical(cid)):
+#             node.color = cid
+#             coloringWithCanonicalOrder(solution,solsorted_set,lcolor,i+1,lnodes)
+#             node.color = -1 #for backtracking
+
+def coloringWithCanonicalOrder(solution, solsorted_set, lcolor, i, lnodes):
     if i == len(lnodes):
         sol = [node.color for node in lnodes]
-        sortedsol = sorted(sol)
-        # res =
+        sortedsol = tuple(sorted(sol))  # keeps duplicates, order-independent
 
-        if tuple(sortedsol) not in solsorted_set:
+        if sortedsol not in solsorted_set:
             solution.append(sol)
-            solsorted_set.add(tuple(sortedsol))
+            solsorted_set.add(sortedsol)  # fast O(1) lookup
         return
+
     if len(solution) >= 10000:
         return
-        # fillColor(node[0],lcolor)
+
     node = lnodes[i]
     for cid, color in enumerate(lcolor):
-        if(node.isSafeCanonical(cid)):
+        if node.isSafeCanonical(cid):
             node.color = cid
-            coloringWithCanonicalOrder(solution,solsorted_set,lcolor,i+1,lnodes)
-            node.color = -1 #for backtracking
+            coloringWithCanonicalOrder(solution, solsorted_set, lcolor, i+1, lnodes)
+            node.color = -1  # backtrack
 
 def getSolutions(lnodes,lcolor):
     Solutions = list()

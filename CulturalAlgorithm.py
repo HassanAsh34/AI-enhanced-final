@@ -76,7 +76,58 @@ def calculatefitness(population,graph):
         # return np.array(belief_space), np.array(population)
 
 
-def CulturalAlgorithm(nodes, colors, g, pop_size, mutaion_rate, belief_size,influence_rate = .6):
+# def CulturalAlgorithm(nodes, colors, g, pop_size, mutaion_rate, belief_size,influence_rate = .6,threshold = 1e-3):
+#     population = generatePopulation(len(nodes), len(colors), pop_size)
+#     population, avg_fitness, avg_chromatic = calculatefitness(population, g)
+#
+#     belief_space = []
+#     average_fitnessListforPopulation = list()
+#     average_chromaticNumberListforPopulation = list()
+#     average_fitnessListforPopulation.append(avg_fitness)
+#     average_chromaticNumberListforPopulation.append(avg_chromatic)
+#     avg_fitnessforBelief = list()
+#     average_chromaticNumberListforBelief = list()
+#     # threshold = 1e-3  # convergence threshold
+#     convergence_window = 5  # check last 5 iterations
+#     converged_at = 0
+#     for i in range(50000):
+#         # print(i)
+#         elites = population[:max(1, int(.1 * len(population)))]
+#         belief_space = update_belief_space(belief_space, elites, belief_size)
+#         population = generate_new_population(mutaion_rate, elites, belief_size, belief_space,
+#                                              len(nodes), len(colors), pop_size,influence_rate)
+#         population, avg_fitness, avg_chromatic = calculatefitness(population, g)
+#
+#         # print(belief_space)
+#         # Convergence check
+#         if i % 1000 == 0:
+#             converged_at = i #i will keep it like this in case we havent converged
+#             print("Still improving...")
+#             avgf = list()
+#             avgc = list()
+#             for fitness in belief_space:
+#                 avgf.append(fitness[1])
+#                 avgc.append(fitness[3])
+#             avgf = float(np.average(avgf))
+#             avgc = int(np.average(avgc))
+#             if len(avg_fitnessforBelief) > convergence_window:
+#                 recent_changes = np.abs(np.diff(avg_fitnessforBelief[-convergence_window:]))
+#                 if np.all(recent_changes < threshold):
+#                     print(f"Algorithm has converged at iteration {i}")
+#                     # converged_at = i
+#                     break
+#                 else:
+#                     avg_fitnessforBelief.append(avgf)
+#                     average_chromaticNumberListforBelief.append(avgc)
+#                     average_fitnessListforPopulation.append(avg_fitness)
+#                     average_chromaticNumberListforPopulation.append(avg_chromatic)
+#             else:
+#                 avg_fitnessforBelief.append(avgf)
+#                 average_chromaticNumberListforBelief.append(avgc)
+#                 average_fitnessListforPopulation.append(avg_fitness)
+#                 average_chromaticNumberListforPopulation.append(avg_chromatic)
+
+def CulturalAlgorithm(nodes, colors, g, pop_size, mutaion_rate, belief_size, influence_rate=.6, threshold=1e-3):
     population = generatePopulation(len(nodes), len(colors), pop_size)
     population, avg_fitness, avg_chromatic = calculatefitness(population, g)
 
@@ -87,7 +138,7 @@ def CulturalAlgorithm(nodes, colors, g, pop_size, mutaion_rate, belief_size,infl
     average_chromaticNumberListforPopulation.append(avg_chromatic)
     avg_fitnessforBelief = list()
     average_chromaticNumberListforBelief = list()
-    threshold = 1e-3  # convergence threshold
+    # threshold = 1e-3  # convergence threshold
     convergence_window = 5  # check last 5 iterations
     converged_at = 0
     for i in range(50000):
@@ -95,15 +146,14 @@ def CulturalAlgorithm(nodes, colors, g, pop_size, mutaion_rate, belief_size,infl
         elites = population[:max(1, int(.1 * len(population)))]
         belief_space = update_belief_space(belief_space, elites, belief_size)
         population = generate_new_population(mutaion_rate, elites, belief_size, belief_space,
-                                             len(nodes), len(colors), pop_size,influence_rate)
+                                             len(nodes), len(colors), pop_size, influence_rate)
         population, avg_fitness, avg_chromatic = calculatefitness(population, g)
 
         # print(belief_space)
         # Convergence check
         if i % 1000 == 0:
+            converged_at = i  # i will keep it like this in case we havent converged
             print("Still improving...")
-            average_fitnessListforPopulation.append(avg_fitness)
-            average_chromaticNumberListforPopulation.append(avg_chromatic)
             avgf = list()
             avgc = list()
             for fitness in belief_space:
@@ -111,15 +161,16 @@ def CulturalAlgorithm(nodes, colors, g, pop_size, mutaion_rate, belief_size,infl
                 avgc.append(fitness[3])
             avgf = float(np.average(avgf))
             avgc = int(np.average(avgc))
+            if len(avg_fitnessforBelief) > convergence_window:
+                recent_changes = np.abs(np.diff(avg_fitnessforBelief[-convergence_window:]))
+                if np.all(recent_changes < threshold):
+                    print(f"Algorithm has converged at iteration {i}")
+                    # converged_at = i
+                    break
             avg_fitnessforBelief.append(avgf)
             average_chromaticNumberListforBelief.append(avgc)
-        if len(avg_fitnessforBelief) > convergence_window:
-            recent_changes = np.abs(np.diff(avg_fitnessforBelief[-convergence_window:]))
-            if np.all(recent_changes < threshold):
-                print(f"Algorithm has converged at iteration {i}")
-                converged_at = i
-                break
-
+            average_fitnessListforPopulation.append(avg_fitness)
+            average_chromaticNumberListforPopulation.append(avg_chromatic)
 
 
     return belief_space, population, average_fitnessListforPopulation, average_chromaticNumberListforPopulation, avg_fitnessforBelief , average_chromaticNumberListforBelief , converged_at
@@ -135,7 +186,8 @@ def update_belief_space(belief_space,elites,belief_size):
             belief_space.extend(elites[:belief_size])
     else:
         for elite in elites:
-            if belief_size_curr < len(elites):
+            # if belief_size_curr < len(elites):
+            if belief_size_curr < belief_size:
                 belief_space.append(elite)
                 continue
             worst = min(belief_space,key=lambda x:x[1])
@@ -154,7 +206,7 @@ def generate_new_population(mutaion_rate,elites,belief_size,belief_space,num_nod
     crossover_elites = crossover(elites,num_nodes)
     new_pop.extend(crossover_elites)
 
-    belief_offspring_count = int(pop_size*.7)
+    belief_offspring_count = int((pop_size-len(new_pop))*.7)
 
     belief_influenced = get_belief_influenced_children(belief_offspring_count,belief_space,num_nodes,num_colors,influence_rate)
     new_pop.extend(belief_influenced)
