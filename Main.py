@@ -462,7 +462,7 @@ card9 , RunBTBtn = create_metric_card(BackTrackingForm,"",tk.Button,flag=False)
 RunBTBtn.configure(text = "Run",command=lambda: run_Backtracking(), bg="#27ae60")
 
 card10 , AddColorBtn = create_metric_card(BackTrackingForm,"",tk.Button,flag=False)
-AddColorBtn.configure(text="Add Node",command=lambda: add_color(), bg="#3498db")
+AddColorBtn.configure(text="Add Color",command=lambda: add_color(), bg="#3498db")
 
 
 
